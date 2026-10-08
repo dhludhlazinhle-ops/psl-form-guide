@@ -1,0 +1,5 @@
+.venv/
+.env
+data/bronze/
+*.duckdb
+__pycache__/
