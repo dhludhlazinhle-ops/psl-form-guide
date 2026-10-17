@@ -11,7 +11,7 @@ import requests
 API_KEY = "123"  # TheSportsDB public test key - check their docs for current limits
 BASE_URL = f"https://www.thesportsdb.com/api/v1/json/{API_KEY}"
 LEAGUE_ID = 4802  # South African Premier Soccer League
-SEASONS = ["2023-2024", "2024-2025", "2025-2026"]
+SEASONS = ["2023-2024", "2024-2025", "2025-2026", "2026-2027"]
 MAX_ROUNDS = 30  # 16 teams -> 30 rounds per season
 REQUEST_DELAY = 2.5  # seconds between calls, to respect the free rate limit
 
