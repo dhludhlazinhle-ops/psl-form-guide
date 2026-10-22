@@ -13,7 +13,8 @@ from src import ingest, pipeline
 
 @task(retries=2, retry_delay_seconds=30)
 def ingest_task(seasons: list[str]) -> int:
-    # Safe to retry: ingest only writes to bronze once every round has been fetched.
+        # Safe to retry: re-loading a season only adds duplicate bronze rows, and silver
+    # keeps the newest copy of every match.
     return pipeline.step_ingest(seasons)
 
 

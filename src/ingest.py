@@ -27,8 +27,16 @@ KEEP_COLS = [
 ]
 
 
-def fetch_round(season: str, rnd: int, retries: int = 3) -> list[dict]:
-    """Fetch all matches for one round. Retries on errors, raises if it keeps failing."""
+def _retry_after(resp, default: float) -> float:
+    """How long the API asked us to wait (Retry-After header), capped at two minutes."""
+    try:
+        return min(float(resp.headers.get("Retry-After", default)), 120.0)
+    except (TypeError, ValueError):
+        return default
+
+
+def fetch_round(season: str, rnd: int, retries: int = 6) -> list[dict]:
+    """Fetch all matches for one round. Waits when rate limited, raises if it keeps failing."""
     for attempt in range(1, retries + 1):
         try:
             resp = requests.get(
@@ -36,15 +44,26 @@ def fetch_round(season: str, rnd: int, retries: int = 3) -> list[dict]:
                 params={"id": LEAGUE_ID, "r": rnd, "s": season},
                 timeout=20,
             )
-            if resp.status_code == 429:  # rate limited: wait longer each attempt
-                time.sleep(10 * attempt)
+            if resp.status_code == 429:  # rate limited: wait, a bit longer each attempt
+                wait = _retry_after(resp, default=min(30 * attempt, 120))
+                print(f"  rate limited (429) on {season} round {rnd}; "
+                      f"waiting {wait:.0f}s (attempt {attempt}/{retries})")
+                time.sleep(wait)
                 continue
             resp.raise_for_status()
             return resp.json().get("events") or []
         except (requests.RequestException, ValueError) as exc:
-            print(f"  attempt {attempt} failed for {season} round {rnd}: {exc}")
+            print(f"  attempt {attempt}/{retries} failed for {season} round {rnd}: {exc}")
             time.sleep(2 * attempt)
-    raise RuntimeError(f"Giving up on {season} round {rnd}")
+    raise RuntimeError(f"Giving up on {season} round {rnd} after {retries} attempts")
+
+
+def fetch_season(season: str) -> list[dict]:
+    events: list[dict] = []
+    for rnd in range(1, MAX_ROUNDS + 1):
+        events.extend(fetch_round(season, rnd))
+        time.sleep(REQUEST_DELAY)
+    return events
 
 
 def load_bronze(con, events: list[dict], loaded_at: datetime) -> int:
@@ -71,37 +90,34 @@ def current_season(today: date | None = None) -> str:
 def run(seasons: list[str] | None = None) -> int:
     """Fetch the given seasons (default: all) and append them to bronze. Returns rows loaded.
 
-    Nothing is written until every round has been fetched, so a failure part-way
-    through leaves bronze untouched and the whole run can simply be retried.
+    Each season is loaded as soon as it has been fetched, so a failure part-way through
+    keeps the seasons that finished. Re-running is safe: silver keeps only the newest
+    copy of every match.
     """
     seasons = seasons or SEASONS
     BRONZE_DIR.mkdir(parents=True, exist_ok=True)
     loaded_at = datetime.now(timezone.utc).replace(tzinfo=None)
     stamp = loaded_at.strftime("%Y%m%dT%H%M%S")
 
-    all_events: list[dict] = []
+    total = 0
     for season in seasons:
-        season_events: list[dict] = []
-        for rnd in range(1, MAX_ROUNDS + 1):
-            season_events.extend(fetch_round(season, rnd))
-            time.sleep(REQUEST_DELAY)
-        print(f"{season}: {len(season_events)} matches")
+        events = fetch_season(season)
+        if not events:
+            print(f"{season}: no matches returned, skipping")
+            continue
         # Keep the untouched raw response on disk
-        (BRONZE_DIR / f"events_{season}_{stamp}.json").write_text(
-            json.dumps(season_events, indent=2)
-        )
-        all_events.extend(season_events)
+        (BRONZE_DIR / f"events_{season}_{stamp}.json").write_text(json.dumps(events, indent=2))
+        con = duckdb.connect(DB_PATH)
+        try:
+            n = load_bronze(con, events, loaded_at)
+        finally:
+            con.close()
+        print(f"{season}: loaded {n} matches")
+        total += n
 
-    if not all_events:
+    if total == 0:
         raise RuntimeError("No events returned - check the league id, seasons and API limits.")
-
-    con = duckdb.connect(DB_PATH)
-    try:
-        n = load_bronze(con, all_events, loaded_at)
-    finally:
-        con.close()
-    print(f"Loaded {n} rows into bronze_events")
-    return n
+    return total
 
 
 def main() -> None:
