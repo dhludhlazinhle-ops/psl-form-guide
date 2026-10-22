@@ -2,6 +2,7 @@ duckdb
 pandas
 requests
 python-dotenv
+anthropic
 pytest
 prefect
 streamlit

@@ -38,8 +38,8 @@ st.caption(
     f"last data refresh: {last_load:%d %b %Y %H:%M} UTC"
 )
 
-tab_table, tab_elo, tab_form, tab_pred = st.tabs(
-    ["League table", "Elo ratings", "Form guide", "Predictions"]
+tab_table, tab_elo, tab_form, tab_pred, tab_recap = st.tabs(
+    ["League table", "Elo ratings", "Form guide", "Predictions", "Weekly recap"]
 )
 
 with tab_table:
@@ -116,3 +116,27 @@ with tab_pred:
         "Probabilities come from Elo ratings plus a simple draw heuristic. "
         "They are estimates, not betting advice."
     )
+
+with tab_recap:
+    has_recap_table = query(DB_PATH, """
+        SELECT COUNT(*) AS n FROM information_schema.tables WHERE table_name = 'gold_weekly_recap'
+    """).iloc[0]["n"]
+    latest = (
+        query(DB_PATH, """
+            SELECT generated_at, season, model, recap, facts
+            FROM gold_weekly_recap ORDER BY generated_at DESC LIMIT 1
+        """)
+        if has_recap_table
+        else pd.DataFrame()
+    )
+    if latest.empty:
+        st.info("No recap yet. Set ANTHROPIC_API_KEY, then run `python -m src.recap`.")
+    else:
+        row = latest.iloc[0]
+        st.markdown(row["recap"])
+        st.caption(
+            f"Written by {row['model']} on {pd.to_datetime(row['generated_at']):%d %b %Y %H:%M} UTC, "
+            "using only the numbers from the other tabs."
+        )
+        with st.expander("Facts the recap was written from"):
+            st.text(row["facts"])

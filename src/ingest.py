@@ -1,5 +1,6 @@
 """Ingest: pull PSL match data from TheSportsDB and land it raw (bronze)."""
 import json
+import os
 import sys
 import time
 from datetime import date, datetime, timezone
@@ -14,8 +15,7 @@ BASE_URL = f"https://www.thesportsdb.com/api/v1/json/{API_KEY}"
 LEAGUE_ID = 4802  # South African Premier Soccer League
 SEASONS = ["2023-2024", "2024-2025", "2025-2026", "2026-2027"]
 MAX_ROUNDS = 30  # 16 teams -> 30 rounds per season
-REQUEST_DELAY = 2.5  # seconds between calls, to respect the free rate limit
-
+REQUEST_DELAY = float(os.environ.get("PSL_REQUEST_DELAY", "2.5"))  # seconds between calls
 BRONZE_DIR = Path("data/bronze")
 DB_PATH = "data/psl.duckdb"
 

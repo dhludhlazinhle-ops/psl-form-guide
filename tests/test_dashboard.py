@@ -3,7 +3,7 @@ from pathlib import Path
 import duckdb
 from streamlit.testing.v1 import AppTest
 
-from src import clean, model
+from src import clean, model, recap
 
 BRONZE_DDL = """
     CREATE TABLE bronze_events (
@@ -24,7 +24,7 @@ MATCHES = [
 ]
 
 
-def build_db(path):
+def build_db(path, with_recap=False):
     con = duckdb.connect(str(path))
     con.execute(BRONZE_DDL)
     for event_id, season, home, away, hg, ag, d in MATCHES:
@@ -34,16 +34,27 @@ def build_db(path):
         )
     clean.build_silver(con)
     model.build_gold(con)
+    if with_recap:
+        recap.save_recap(con, "2026-2027", "test-model", "some facts", "Sundowns are flying this week.")
     con.close()
 
 
-def test_dashboard_renders_all_four_tabs_without_errors(tmp_path, monkeypatch):
+def test_dashboard_renders_all_tabs_without_errors(tmp_path, monkeypatch):
     db = tmp_path / "psl.duckdb"
     build_db(db)
     monkeypatch.setenv("PSL_DB_PATH", str(db))
     at = AppTest.from_file(APP, default_timeout=30).run()
     assert not at.exception
-    assert len(at.tabs) == 4
+    assert len(at.tabs) == 5
+
+
+def test_dashboard_shows_the_latest_recap(tmp_path, monkeypatch):
+    db = tmp_path / "psl.duckdb"
+    build_db(db, with_recap=True)
+    monkeypatch.setenv("PSL_DB_PATH", str(db))
+    at = AppTest.from_file(APP, default_timeout=30).run()
+    assert not at.exception
+    assert any("Sundowns are flying" in m.value for m in at.markdown)
 
 
 def test_dashboard_explains_what_to_do_when_the_database_is_missing(tmp_path, monkeypatch):
