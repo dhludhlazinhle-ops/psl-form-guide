@@ -1,7 +1,8 @@
-"""Day 1 - Ingest: pull PSL match data from TheSportsDB and land it raw (bronze)."""
+"""Ingest: pull PSL match data from TheSportsDB and land it raw (bronze)."""
 import json
+import sys
 import time
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 import duckdb
@@ -60,13 +61,26 @@ def load_bronze(con, events: list[dict], loaded_at: datetime) -> int:
     return len(df)
 
 
-def main() -> None:
+def current_season(today: date | None = None) -> str:
+    """PSL seasons run August to May, so from July onwards we are in the new season."""
+    today = today or date.today()
+    start = today.year if today.month >= 7 else today.year - 1
+    return f"{start}-{start + 1}"
+
+
+def run(seasons: list[str] | None = None) -> int:
+    """Fetch the given seasons (default: all) and append them to bronze. Returns rows loaded.
+
+    Nothing is written until every round has been fetched, so a failure part-way
+    through leaves bronze untouched and the whole run can simply be retried.
+    """
+    seasons = seasons or SEASONS
     BRONZE_DIR.mkdir(parents=True, exist_ok=True)
     loaded_at = datetime.now(timezone.utc).replace(tzinfo=None)
     stamp = loaded_at.strftime("%Y%m%dT%H%M%S")
 
     all_events: list[dict] = []
-    for season in SEASONS:
+    for season in seasons:
         season_events: list[dict] = []
         for rnd in range(1, MAX_ROUNDS + 1):
             season_events.extend(fetch_round(season, rnd))
@@ -79,12 +93,20 @@ def main() -> None:
         all_events.extend(season_events)
 
     if not all_events:
-        raise SystemExit("No events returned - check the league id, seasons and API limits.")
+        raise RuntimeError("No events returned - check the league id, seasons and API limits.")
 
     con = duckdb.connect(DB_PATH)
-    n = load_bronze(con, all_events, loaded_at)
+    try:
+        n = load_bronze(con, all_events, loaded_at)
+    finally:
+        con.close()
     print(f"Loaded {n} rows into bronze_events")
-    con.close()
+    return n
+
+
+def main() -> None:
+    """python -m src.ingest [season ...]   e.g. python -m src.ingest 2026-2027"""
+    run(sys.argv[1:] or None)
 
 
 if __name__ == "__main__":
