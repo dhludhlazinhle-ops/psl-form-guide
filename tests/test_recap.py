@@ -35,9 +35,7 @@ class FakeClient:
         return SimpleNamespace(content=[SimpleNamespace(type="text", text=self._text)])
 
 
-@pytest.fixture
-def con():
-    c = duckdb.connect()
+def build_gold_tables(c):
     c.execute(BRONZE_DDL)
     for event_id, home, away, hg, ag, d in MATCHES:
         c.execute(
@@ -46,6 +44,12 @@ def con():
         )
     clean.build_silver(c)
     model.build_gold(c)
+
+
+@pytest.fixture
+def con():
+    c = duckdb.connect()
+    build_gold_tables(c)
     return c
 
 
@@ -95,3 +99,25 @@ def test_run_skips_politely_without_an_api_key(tmp_path, monkeypatch):
     monkeypatch.setattr(recap, "make_client", lambda: None)
     assert recap.run(db_path=str(tmp_path / "unused.duckdb")) == {"recap": "skipped"}
     assert not (tmp_path / "unused.duckdb").exists()
+
+
+def test_the_placeholder_from_env_example_counts_as_no_key(monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "your-key-here")
+    assert recap.make_client() is None
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "   ")
+    assert recap.make_client() is None
+
+
+def test_run_reports_an_api_failure_without_crashing(tmp_path, monkeypatch, capsys):
+    db = str(tmp_path / "psl.duckdb")
+    c = duckdb.connect(db)
+    build_gold_tables(c)
+    c.close()
+
+    def refuse(**kwargs):
+        raise PermissionError("bad key")
+
+    client = SimpleNamespace(messages=SimpleNamespace(create=refuse))
+    monkeypatch.setattr(recap, "_api_error_types", lambda: (PermissionError,))
+    assert recap.run(db_path=db, client=client) == {"recap": "failed"}
+    assert "bad key" in capsys.readouterr().out

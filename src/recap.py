@@ -16,6 +16,7 @@ except ImportError:  # pragma: no cover
 
 DB_PATH = "data/psl.duckdb"
 DEFAULT_MODEL = "claude-sonnet-5-5"  # override with the PSL_RECAP_MODEL environment variable
+PLACEHOLDER_KEYS = {"", "your-key-here"}  # what .env.example ships with
 
 SYSTEM_PROMPT = (
     "You are a witty South African football pundit writing a short weekly PSL recap. "
@@ -100,23 +101,38 @@ def generate_recap(con, client, model: str | None = None) -> dict:
 
 
 def make_client():
-    """Return an Anthropic client, or None when no API key is configured."""
-    key = os.environ.get("ANTHROPIC_API_KEY")
-    if not key:
+    """Return an Anthropic client, or None when no real API key is configured."""
+    key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+    if key in PLACEHOLDER_KEYS:
         return None
     import anthropic  # imported here so the rest of the project works without it
 
     return anthropic.Anthropic(api_key=key)
 
 
+def _api_error_types() -> tuple:
+    """The exceptions that mean 'the API call failed' (bad key, no credit, network, ...)."""
+    try:
+        import anthropic
+
+        return (anthropic.APIError,)
+    except (ImportError, AttributeError):
+        return ()
+
+
 def run(db_path: str = DB_PATH, client=None) -> dict:
     client = client or make_client()
     if client is None:
-        print("ANTHROPIC_API_KEY is not set - skipping the weekly recap")
+        print("ANTHROPIC_API_KEY is not set (or is still the placeholder in .env) - "
+              "skipping the weekly recap")
         return {"recap": "skipped"}
     con = duckdb.connect(db_path)
     try:
         result = generate_recap(con, client)
+    except _api_error_types() as exc:
+        print(f"Weekly recap failed ({type(exc).__name__}): {exc}\n"
+              "Check ANTHROPIC_API_KEY in your .env file and that your account has credit.")
+        return {"recap": "failed"}
     finally:
         con.close()
     print(result["recap"])
