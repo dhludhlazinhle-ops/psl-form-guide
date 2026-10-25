@@ -1,27 +1,35 @@
 # PSL Form Guide
 
 [![tests](https://github.com/dhludhlazinhle-ops/psl-form-guide/actions/workflows/ci.yml/badge.svg)](https://github.com/dhludhlazinhle-ops/psl-form-guide/actions/workflows/ci.yml)
+[![live site](https://img.shields.io/badge/live%20site-open-c6ff3d?style=flat&labelColor=060a12)](https://dhludhlazinhle-ops.github.io/psl-form-guide/)
 
-An end-to-end data pipeline and analytics app for the South African Premier Soccer League (PSL). It ingests match results, cleans and models them in a warehouse, rates every team with Elo, predicts upcoming fixtures, and serves everything through a dashboard with a weekly recap written by Claude.
+**[Open the live site](https://dhludhlazinhle-ops.github.io/psl-form-guide/)**
 
-![Dashboard](docs/dashboard.png)
+An end-to-end data product for the South African Premier Soccer League (PSL): a tested pipeline that ingests match results, models them in a DuckDB warehouse, rates every team with Elo, predicts upcoming fixtures, and serves everything through a fast, club-badge-rich website with a weekly recap written by Claude.
+
+| League table and spotlight | Team page |
+|---|---|
+| ![Home](docs/screenshot-home.png) | ![Team page](docs/screenshot-team.png) |
 
 ## What it answers
 
-- Who is actually in form right now? (last five results per team)
-- How strong is each team really, and how has that changed? (Elo rating history)
-- Who is likely to win the next fixtures? (win / draw / loss probabilities)
-- What happened this week, in plain language? (Claude-written recap, grounded in the numbers)
+- Who is actually in form right now? (last five results for every team)
+- How strong is each side, and how has that moved? (Elo rating history)
+- Who is likely to win the next fixtures? (win, draw and loss probabilities)
+- What happened this week, in plain language? (a Claude-written recap grounded in the numbers)
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-    API[TheSportsDB API] -->|requests, retries, rate-limit handling| B[(bronze_events)]
-    B -->|type, dedupe, map team names| S[(silver_matches)]
-    S -->|quality checks| G[(gold tables)]
-    S -.->|rows that fail dedupe rules| Q[(silver_quarantine)]
-    G --> D[Streamlit dashboard]
+    API[TheSportsDB API] -->|retries, rate-limit handling| B[(bronze)]
+    B -->|type, dedupe, standardise names| S[(silver)]
+    S -.->|rows removed by a rule| Q[(quarantine)]
+    S -->|quality checks| G[(gold)]
+    G --> X[src/export.py]
+    X --> J[docs/data.js]
+    J --> W[Website on GitHub Pages]
+    G --> D[Streamlit analyst dashboard]
     G -->|facts only| C[Claude weekly recap]
     C --> G
 ```
@@ -30,23 +38,23 @@ flowchart LR
 |---|---|---|
 | Bronze | `bronze_events` | Raw API rows, append-only, with a load timestamp. Never edited. |
 | Silver | `silver_matches`, `silver_quarantine`, `dim_team`, `dim_team_alias` | Typed, deduplicated, team names standardised. Rows removed by a rule are kept in quarantine with the reason. |
-| Gold | `fact_match`, `dim_date`, `gold_league_table`, `gold_form`, `gold_elo_history`, `gold_elo_current`, `gold_fixture_predictions`, `gold_active_teams`, `gold_weekly_recap` | Star schema plus analytics tables the dashboard reads. |
+| Gold | `fact_match`, `dim_date`, `gold_league_table`, `gold_form`, `gold_elo_history`, `gold_elo_current`, `gold_fixture_predictions`, `gold_active_teams`, `gold_weekly_recap` | Star schema plus the analytics tables the front ends read. |
 
 Every layer can be rebuilt from the one before it, and the pipeline is safe to run repeatedly.
 
 ## Data quality: what the checks caught
 
-The source data is not clean, and the pipeline has to cope with that. As of October 2026, 970 fixtures were fetched across four seasons. 964 are clean and 6 are quarantined.
+The source data is not clean, so the pipeline has to cope with that. As of October 2026, 970 fixtures were fetched across four seasons: 964 are clean and 6 are quarantined.
 
 | Problem found | How it is handled |
 |---|---|
-| **Stale placeholders.** Rescheduled fixtures appear twice: once as played, once as "not started" with a new id. | The unplayed copy is quarantined when a played row exists for the same season, home team and away team. |
+| **Stale placeholders.** Rescheduled fixtures appear twice: once played, once "not started" with a new id. | The unplayed copy is quarantined when a played row exists for the same season, home team and away team. |
 | **Mirrored duplicate.** One match entered twice on the same day with home and away reversed. | Rows for the same two teams on the same day are collapsed, keeping the played row, then the lowest id. |
 | **Club rename.** SuperSport United continues as Siwelele, and the source retitles old matches with the new name. | A tracked mapping table (`seeds/team_aliases.csv`) maps both names to one team, so Elo history carries over. |
 | **Inconsistent team names** (`Amazulu`, `AmaZulu FC`, ...). | The same alias table. An unmapped name stops the pipeline with a message listing it. |
 | **API rate limiting (HTTP 429).** | Waits for the `Retry-After` period, retries, and saves each season as soon as it is fetched. |
 
-Five quality checks run on every build (missing dates, a team playing itself, goals outside 0 to 15, duplicate match ids, more than one match per home/away pair per season). If any fails, the pipeline stops before gold is rebuilt, so the dashboard keeps showing the last good numbers.
+Five quality checks run on every build: missing dates, a team playing itself, goals outside 0 to 15, duplicate match ids, and more than one match per home/away pair per season. If any fails, the pipeline stops before gold is rebuilt, so the front ends keep showing the last good numbers.
 
 ## The Elo model
 
@@ -58,6 +66,19 @@ Five quality checks run on every build (missing dates, a team playing itself, go
 
 The constants are standard starting values, not tuned for the PSL. Backtesting them is the obvious next improvement.
 
+## The website
+
+`docs/index.html` is a single self-contained page with no build step and no framework.
+
+- **League table** with podium and relegation-zone markers, form chips and a season selector.
+- **Power rankings** with animated Elo bars, five-match rating change and sparklines.
+- **Predictions** for every upcoming fixture, with a three-way probability bar and a team filter.
+- **Team pages** with an Elo history chart, recent results and next fixtures.
+- **Weekly recap** from Claude, with the facts it was written from stored next to the text.
+- Club badges come from the raw API data, with a generated crest as a fallback. It is responsive, keyboard accessible, respects reduced-motion settings, and also works when opened straight from disk.
+
+The page reads one generated file, `docs/data.js`, produced by `src/export.py` from the gold tables. There is no server and no live database behind it, so it is free to host.
+
 ## Run it
 
 ```bash
@@ -68,14 +89,17 @@ source .venv/bin/activate
 pip install -r requirements.txt
 
 python -m src.pipeline --all          # first run: fetch every season, build every layer
-streamlit run dashboard/app.py        # dashboard at http://localhost:8501
+python -m src.export                  # write docs/data.js, then open docs/index.html
 python -m src.pipeline                # later: refresh the current season only
 python -m pytest -q                   # run the tests
+streamlit run dashboard/app.py        # optional analyst dashboard
 ```
 
 The free API is rate limited. On a shared network, slow the requests down: `PSL_REQUEST_DELAY=7 python -m src.pipeline --all`.
 
-**Weekly recap.** Copy `.env.example` to `.env`, add an `ANTHROPIC_API_KEY`, then run `python -m src.pipeline --skip-ingest --recap` (or `python -m src.recap`). The recap is written only from the numbers in the gold tables, and those facts are stored next to the text so every recap can be audited. The dashboard never calls the API itself.
+**Weekly recap.** Copy `.env.example` to `.env`, add an `ANTHROPIC_API_KEY`, then run `python -m src.pipeline --skip-ingest --recap` followed by `python -m src.export`. The recap is written only from the numbers in the gold tables. The website and dashboard never call the API themselves.
+
+**Publishing.** The site is served by GitHub Pages from the `docs/` folder on `main`. After a refresh, commit `docs/data.js` and push.
 
 **Orchestration.** `flows/pipeline_flow.py` wraps the same steps as a Prefect flow with retries: `python -m flows.pipeline_flow`.
 
@@ -87,9 +111,11 @@ src/clean.py        bronze -> silver, quarantine and quality checks
 src/elo.py          Elo maths (pure functions)
 src/model.py        silver -> gold tables and predictions
 src/recap.py        weekly recap with Claude
+src/export.py       gold -> docs/data.js for the website
 src/pipeline.py     ingest -> clean -> model -> recap
+docs/               the website (index.html, data.js)
+dashboard/app.py    Streamlit analyst dashboard
 flows/              Prefect flow
-dashboard/app.py    Streamlit app
 seeds/              team name mapping
 tests/              pytest suite, run on every push by GitHub Actions
 ```
@@ -99,8 +125,8 @@ tests/              pytest suite, run on every push by GitHub Actions
 - Elo constants and the draw heuristic are not tuned. Next: backtest K and home advantage on past seasons.
 - Goal margin is ignored, so a 4-0 and a 1-0 move ratings equally.
 - One free data source. A second source would allow cross-checking scores.
-- The dashboard needs a running server. A static export hosted on GitHub Pages would give a permanent public link.
+- The site is refreshed by running the pipeline and pushing `docs/data.js`. A scheduled GitHub Actions job could do that automatically.
 
 ## Data source and credit
 
-Match data comes from [TheSportsDB](https://www.thesportsdb.com), used through its free test API key. Check their terms before using the data beyond personal projects. This project is not affiliated with the PSL or TheSportsDB. Predictions are statistical estimates, not betting advice.
+Match data and club badges come from [TheSportsDB](https://www.thesportsdb.com), used through its free test API key. Check their terms before using the data beyond personal projects. Badges belong to their clubs and are shown only to identify them. This project is not affiliated with the PSL or any club. Predictions are statistical estimates, not betting advice.

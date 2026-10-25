@@ -1,0 +1,614 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PSL Form Guide · Elo ratings, form and win probabilities</title>
+<meta name="description" content="Elo ratings, current form and win probabilities for every South African Premier Soccer League fixture.">
+<meta name="theme-color" content="#060a12">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23c6ff3d'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%23071006' stroke-width='3'/%3E%3Cpath d='M16 7v18M7 16h18' stroke='%23071006' stroke-width='3'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,500;0,700;0,800;1,700;1,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#060a12; --line:rgba(255,255,255,.1); --text:#eef2f8; --muted:#8e9ab0;
+  --lime:#c6ff3d; --blue:#38a3ff; --hot:#ff5a36; --win:#2fd673; --draw:#f1b53d; --loss:#ff5a5f;
+  --gold:#ffcf3f; --silver:#cfd8e3; --bronze:#e08a4f;
+  --display:"Barlow Condensed","Arial Narrow",Impact,sans-serif;
+  --body:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+*{box-sizing:border-box}
+html{color-scheme:dark;scroll-behavior:smooth}
+body{margin:0;min-height:100vh;color:var(--text);font-family:var(--body);line-height:1.45;
+  -webkit-font-smoothing:antialiased;overflow-x:hidden;background:var(--bg)}
+body::before{content:"";position:fixed;inset:0;z-index:-2;background:
+  radial-gradient(900px 520px at 88% -8%,rgba(56,163,255,.24),transparent 60%),
+  radial-gradient(720px 520px at -8% 8%,rgba(198,255,61,.15),transparent 60%),
+  radial-gradient(820px 620px at 50% 120%,rgba(255,90,54,.13),transparent 60%),var(--bg)}
+.pitch{position:fixed;inset:0;width:100%;height:100%;z-index:-1;opacity:.07;pointer-events:none}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--lime);outline-offset:3px;border-radius:6px}
+.wrap{width:min(1120px,100% - 32px);margin-inline:auto}
+
+/* ---------- top bar ---------- */
+.bar{position:sticky;top:0;z-index:20;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  background:rgba(6,10,18,.74);border-bottom:1px solid var(--line)}
+.bar .wrap{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-block:8px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--text);
+  font:800 1.55rem/1 var(--display);font-style:italic;letter-spacing:.03em;text-transform:uppercase;white-space:nowrap}
+.brand svg{width:30px;height:30px}
+.brand b{color:var(--lime);font-weight:800}
+.tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{position:relative;isolation:isolate;background:none;border:0;cursor:pointer;padding:.55rem 1rem;
+  font:700 1.02rem var(--display);letter-spacing:.07em;text-transform:uppercase;color:var(--muted);white-space:nowrap;
+  transition:color .2s}
+.tab::before{content:"";position:absolute;inset:4px 2px;z-index:-1;background:var(--lime);
+  transform:skewX(-14deg) scaleX(0);transform-origin:left;transition:transform .28s cubic-bezier(.2,.8,.2,1)}
+.tab:hover{color:var(--text)}
+.tab[aria-selected="true"]{color:#071006}
+.tab[aria-selected="true"]::before{transform:skewX(-14deg) scaleX(1)}
+
+/* ---------- hero ---------- */
+.hero{position:relative;padding:clamp(30px,6vw,70px) 0 8px}
+.hero[hidden]{display:none}
+.hero::before{content:"";position:absolute;right:-6%;top:-30px;width:46%;height:115%;pointer-events:none;
+  background:repeating-linear-gradient(115deg,rgba(255,255,255,.055) 0 14px,transparent 14px 34px);
+  transform:skewX(-12deg);-webkit-mask-image:linear-gradient(90deg,transparent,#000);mask-image:linear-gradient(90deg,transparent,#000)}
+.tag{display:inline-block;transform:skewX(-12deg);background:var(--lime);color:#071006;padding:.3rem .85rem;
+  font:800 .86rem var(--display);letter-spacing:.16em;text-transform:uppercase}
+.tag span{display:inline-block;transform:skewX(12deg)}
+h1{margin:14px 0 0;font:800 clamp(3.6rem,13vw,9.4rem)/.84 var(--display);font-style:italic;text-transform:uppercase;letter-spacing:-.01em}
+h1 .outline{color:transparent;-webkit-text-stroke:2px var(--lime)}
+h1 .solid{background:linear-gradient(180deg,#fff,#b9c5da);-webkit-background-clip:text;background-clip:text;color:transparent}
+.lede{max-width:560px;margin:18px 0 0;font-size:1.08rem;color:#c3cddd}
+.meta{margin:10px 0 0;font-size:.86rem;color:var(--muted)}
+.meta b{color:var(--text);font-weight:600}
+
+.ticker{margin-top:30px;overflow:hidden;border-block:1px solid var(--line);
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent);mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent)}
+.ticker-track{display:flex;gap:2.4rem;width:max-content;padding:11px 0;white-space:nowrap;animation:tick 70s linear infinite}
+.ticker:hover .ticker-track{animation-play-state:paused}
+.tk{display:inline-flex;align-items:center;gap:8px;font-size:.9rem;color:#d4dcea}
+.tk .when{font:700 .8rem var(--display);letter-spacing:.1em;color:var(--muted);text-transform:uppercase}
+.tk b{font:800 1.1rem var(--display);color:var(--lime);letter-spacing:.04em;padding:0 2px}
+@keyframes tick{to{transform:translateX(-50%)}}
+
+.spot{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin-top:22px}
+.card{position:relative;overflow:hidden;display:flex;flex-direction:column;padding:18px;border:1px solid var(--line);border-radius:18px;
+  background:linear-gradient(160deg,rgba(255,255,255,.075),rgba(255,255,255,.02))}
+.card::after{content:"";position:absolute;right:-26px;top:-26px;width:104px;height:104px;border-radius:24px;
+  background:var(--accent,var(--lime));opacity:.13;transform:rotate(24deg)}
+.card .kicker{font:800 .8rem var(--display);letter-spacing:.17em;text-transform:uppercase;color:var(--muted)}
+.card .who{display:flex;align-items:center;gap:14px;margin-top:12px}
+.card .who strong{display:block;font:800 1.55rem/1.05 var(--display);text-transform:uppercase;letter-spacing:.01em}
+.card .who small{color:var(--muted);font-size:.84rem}
+.card .big{color:var(--accent,var(--lime))}
+.card .foot{margin-top:auto;padding-top:14px;color:#b9c4d8;font-size:.84rem}
+.card .foot::before{content:"";display:block;height:1px;margin-bottom:10px;background:var(--line)}
+.card.next .who strong{font-size:1.2rem}
+.mini{display:flex;gap:3px;height:8px;margin-bottom:6px}.mini i{display:block;border-radius:99px;min-width:3px}.mini .ph{background:var(--lime)}.mini .pd{background:#5d6879}.mini .pa{background:var(--blue)}
+.card.link{cursor:pointer;transition:transform .2s,border-color .2s}
+.card.link:hover{transform:translateY(-3px);border-color:rgba(255,255,255,.28)}
+.vsrow{display:flex;align-items:center;gap:10px;margin-top:12px}
+.vsrow i{font:800 .95rem var(--display);font-style:normal;color:var(--muted);letter-spacing:.1em}
+
+/* ---------- crest ---------- */
+.crest{--s:40px;width:var(--s);height:var(--s);flex:none;display:grid;place-items:center;border-radius:50%;
+  padding:calc(var(--s)*.13);
+  background:radial-gradient(circle at 30% 22%,hsl(var(--h) 80% 62%/.38),hsl(var(--h) 70% 18%/.55));
+  box-shadow:0 0 0 1px rgba(255,255,255,.13),0 6px 18px hsl(var(--h) 80% 42%/.3)}
+.crest img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 2px 4px rgba(0,0,0,.5))}
+.mono{font:800 calc(var(--s)*.38)/1 var(--display);letter-spacing:.02em;color:#fff;text-transform:uppercase}
+
+/* ---------- sections ---------- */
+.panel{margin-top:34px}
+.hero[hidden]+.panel,.hero[hidden]~.panel{margin-top:30px}
+.panel[hidden]{display:none}
+.sec-head{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:12px}
+h2{margin:0;font:800 clamp(2rem,5vw,2.9rem)/1 var(--display);font-style:italic;text-transform:uppercase}
+h2::after{content:"";display:block;width:64px;height:5px;margin-top:8px;background:var(--lime);transform:skewX(-20deg)}
+.hint{margin:0;color:var(--muted);font-size:.9rem;max-width:480px}
+select{background:#0d1422;color:var(--text);border:1px solid var(--line);border-radius:10px;padding:.5rem .8rem;font:600 .92rem var(--body);cursor:pointer}
+
+/* ---------- league table ---------- */
+.table-wrap{overflow-x:auto}
+table.league{width:100%;border-collapse:separate;border-spacing:0 6px;min-width:560px}
+.league th{padding:6px 10px;text-align:right;font:700 .78rem var(--display);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.league th:nth-child(2){text-align:left}
+.league td{padding:8px 10px;background:rgba(255,255,255,.045);text-align:right;font-variant-numeric:tabular-nums;transition:background .2s}
+.league tr.row{cursor:pointer}
+.league tr.row:hover td{background:rgba(255,255,255,.1)}
+.league td:first-child{border-radius:14px 0 0 14px;border-left:5px solid transparent;text-align:center;width:54px}
+.league td:last-child{border-radius:0 14px 14px 0}
+.league .pos{font:800 1.5rem var(--display);font-style:italic;color:var(--muted)}
+.league .p1 td:first-child{border-left-color:var(--gold)} .league .p1 .pos{color:var(--gold)}
+.league .p2 td:first-child{border-left-color:var(--silver)} .league .p2 .pos{color:var(--silver)}
+.league .p3 td:first-child{border-left-color:var(--bronze)} .league .p3 .pos{color:var(--bronze)}
+.league .dz td:first-child{border-left-color:var(--loss)} .league .dz .pos{color:var(--loss)}
+.team-link{display:flex;align-items:center;gap:12px;background:none;border:0;padding:0;cursor:pointer;text-align:left}
+.team-link .nm{font:700 1.18rem var(--display);letter-spacing:.02em;text-transform:uppercase}
+.league .tm{text-align:left}
+.league .pts{font:800 1.5rem var(--display);color:var(--lime)}
+.league .frm{white-space:nowrap}
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;color:var(--muted);font-size:.82rem}
+.legend>span{display:inline-flex;align-items:center;gap:7px}
+.dot{width:10px;height:10px;border-radius:3px;display:inline-block}
+
+.chip{display:inline-grid;place-items:center;width:23px;height:23px;margin-left:3px;border-radius:6px;
+  font:800 .8rem var(--display);color:#06100a}
+.chip.w{background:var(--win)} .chip.d{background:var(--draw)} .chip.l{background:var(--loss)}
+
+/* ---------- power rankings ---------- */
+.power{display:grid;gap:8px}
+.prow{display:grid;grid-template-columns:42px 50px 1fr 214px;align-items:center;gap:14px;padding:12px 16px;cursor:pointer;
+  border:1px solid var(--line);border-radius:16px;background:linear-gradient(90deg,rgba(255,255,255,.06),rgba(255,255,255,.02));
+  transition:transform .2s,border-color .2s}
+.prow:hover{transform:translateX(4px);border-color:rgba(255,255,255,.28)}
+.prow .rk{font:800 1.9rem var(--display);font-style:italic;color:var(--muted);text-align:center}
+.prow:nth-child(1) .rk{color:var(--gold)} .prow:nth-child(2) .rk{color:var(--silver)} .prow:nth-child(3) .rk{color:var(--bronze)}
+.prow .nm{font:700 1.2rem var(--display);letter-spacing:.02em;text-transform:uppercase}
+.track{height:10px;margin-top:7px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden}
+.fill{height:100%;width:var(--w);transform-origin:left;border-radius:99px;
+  background:linear-gradient(90deg,hsl(var(--h) 85% 52%),var(--lime));animation:grow .9s cubic-bezier(.2,.8,.2,1) both}
+@keyframes grow{from{transform:scaleX(0)}}
+.rating{display:flex;align-items:center;gap:14px;justify-content:flex-end}
+.rating .val{text-align:right}
+.rating .val strong{display:block;font:800 1.7rem/1 var(--display);color:var(--text)}
+.delta{font:700 .8rem var(--display);letter-spacing:.06em}
+.delta.up{color:var(--win)} .delta.down{color:var(--loss)} .delta.flat{color:var(--muted)}
+.spark{width:96px;height:30px}
+.spark path{fill:none;stroke:var(--lime);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------- predictions ---------- */
+.day h3{display:inline-block;margin:22px 0 10px;transform:skewX(-12deg);padding:.25rem .8rem;background:rgba(255,255,255,.08);
+  font:800 1rem var(--display);letter-spacing:.14em;text-transform:uppercase}
+.day h3 span{display:inline-block;transform:skewX(12deg)}
+.match{display:grid;grid-template-columns:1fr minmax(180px,250px) 1fr;align-items:center;gap:16px;padding:14px 18px;margin-bottom:8px;
+  border:1px solid var(--line);border-radius:16px;background:linear-gradient(160deg,rgba(255,255,255,.065),rgba(255,255,255,.02))}
+.side{display:flex;align-items:center;gap:12px;background:none;border:0;cursor:pointer;padding:0;text-align:left}
+.side.away{flex-direction:row-reverse;text-align:right}
+.side .nm{display:block;font:700 1.15rem/1.1 var(--display);letter-spacing:.02em;text-transform:uppercase}
+.side .nm.fav{color:var(--lime)}
+.side small{color:var(--muted);font-size:.78rem}
+.mid{text-align:center}
+.vs{font:800 .8rem var(--display);letter-spacing:.3em;color:var(--muted);margin-bottom:6px}
+.prob{display:flex;gap:3px;height:12px}
+.prob i{display:block;min-width:4px;border-radius:99px}
+.prob .ph{background:var(--lime)} .prob .pd{background:#5d6879} .prob .pa{background:var(--blue)}
+.pcts{display:flex;justify-content:space-between;margin-top:6px;font:700 .95rem var(--display);letter-spacing:.04em;color:#cdd6e5}
+.pcts span:first-child{color:var(--lime)} .pcts span:last-child{color:var(--blue)}
+.more{display:block;margin:18px auto 0;padding:.7rem 1.6rem;cursor:pointer;border-radius:99px;border:1px solid var(--line);
+  background:rgba(255,255,255,.06);font:700 .95rem var(--display);letter-spacing:.12em;text-transform:uppercase}
+.more:hover{background:var(--lime);color:#071006;border-color:var(--lime)}
+
+/* ---------- recap ---------- */
+.column{max-width:760px;padding:28px clamp(18px,4vw,40px);border:1px solid var(--line);border-radius:22px;position:relative;
+  background:linear-gradient(160deg,rgba(255,255,255,.07),rgba(255,255,255,.02))}
+.column::before{content:"\201C";position:absolute;right:22px;top:-6px;font:700 9rem/1 Georgia,"Times New Roman",serif;color:var(--lime);opacity:.18}
+.column p{margin:0 0 14px;font-size:1.12rem;line-height:1.65;color:#dce3f0}
+.column p:first-of-type::first-letter{float:left;margin:5px 9px 0 0;font:800 5rem/.78 var(--display);font-style:italic;color:var(--lime)}
+.sign{margin-top:18px;padding-top:14px;border-top:1px solid var(--line);color:var(--muted);font-size:.84rem}
+.sign b{color:var(--text)}
+.empty{padding:34px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:18px}
+.empty code{background:rgba(255,255,255,.08);padding:2px 7px;border-radius:6px;color:var(--text)}
+
+/* ---------- team dialog ---------- */
+dialog{width:min(900px,94vw);max-height:92vh;padding:0;border:0;background:transparent;color:var(--text);overflow:visible}
+dialog::backdrop{background:rgba(3,6,12,.8);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px)}
+.sheet{max-height:92vh;overflow:auto;border:1px solid var(--line);border-radius:24px;background:#0b111d;animation:pop .28s cubic-bezier(.2,.8,.2,1)}
+@keyframes pop{from{opacity:0;transform:translateY(16px) scale(.98)}}
+.sheet-head{position:relative;display:flex;align-items:center;gap:22px;padding:28px clamp(18px,4vw,36px);
+  background:linear-gradient(115deg,hsl(var(--h) 70% 24%),transparent 72%),repeating-linear-gradient(115deg,rgba(255,255,255,.05) 0 12px,transparent 12px 30px)}
+.sheet-head h3{margin:0;font:800 clamp(2rem,6vw,3.5rem)/.95 var(--display);font-style:italic;text-transform:uppercase}
+.sheet-head p{margin:6px 0 0;color:#c7d1e2}
+.close{position:absolute;right:14px;top:14px;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);
+  background:rgba(0,0,0,.35);cursor:pointer;font-size:1.2rem;line-height:1}
+.close:hover{background:var(--lime);color:#071006}
+.sheet-body{padding:6px clamp(18px,4vw,36px) 30px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:18px 0}
+.stat{padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.04)}
+.stat small{display:block;font:700 .74rem var(--display);letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+.stat strong{font:800 1.9rem/1.1 var(--display)}
+.sheet h4{margin:22px 0 8px;font:800 1.15rem var(--display);letter-spacing:.14em;text-transform:uppercase;color:var(--lime)}
+.chart{width:100%;height:auto;display:block;border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,.03)}
+.chart .grid{stroke:rgba(255,255,255,.08);stroke-width:1}
+.chart .axis{fill:var(--muted);font:600 11px var(--body)}
+.chart .line{fill:none;stroke:var(--lime);stroke-width:3;stroke-linejoin:round;stroke-linecap:round}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.list{display:grid;gap:6px}
+.item{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:12px;background:rgba(255,255,255,.045);font-size:.92rem}
+.item .dt{width:46px;color:var(--muted);font:700 .85rem var(--display);letter-spacing:.06em;text-transform:uppercase}
+.item .o{flex:1;font:700 1rem var(--display);letter-spacing:.02em;text-transform:uppercase}
+.item .s{font:800 1.2rem var(--display);letter-spacing:.05em}
+.item .pr{font:700 .95rem var(--display);color:var(--lime)}
+
+/* ---------- footer ---------- */
+footer{margin-top:70px;padding:30px 0 60px;border-top:1px solid var(--line);color:var(--muted);font-size:.86rem}
+footer .grid{display:grid;grid-template-columns:1.4fr 1fr;gap:28px}
+footer h5{margin:0 0 8px;font:800 1rem var(--display);letter-spacing:.14em;text-transform:uppercase;color:var(--text)}
+footer p{margin:0 0 8px}
+footer a{color:var(--lime)}
+details{margin-top:8px} summary{cursor:pointer;color:var(--text);font-weight:600}
+details ul{margin:8px 0 0;padding-left:18px} details li{margin:4px 0}
+
+@media (max-width:760px){
+  .bar .wrap{flex-direction:column;align-items:stretch;gap:2px}
+  .brand{font-size:1.3rem}
+  .hide-s{display:none}
+  .prow{grid-template-columns:30px 44px 1fr 92px;gap:10px;padding:10px 12px}
+  .spark{display:none}
+  .match{grid-template-columns:1fr;gap:10px}
+  .side,.side.away{flex-direction:row;text-align:left}
+  .two,footer .grid{grid-template-columns:1fr}
+  .sheet-head{flex-direction:column;align-items:flex-start;gap:12px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  .ticker{overflow-x:auto}
+}
+noscript p{padding:40px;text-align:center}
+</style>
+</head>
+<body>
+<svg class="pitch" viewBox="0 0 1050 680" preserveAspectRatio="xMidYMid slice" aria-hidden="true" fill="none" stroke="#fff" stroke-width="3">
+  <rect x="25" y="25" width="1000" height="630"/><path d="M525 25v630"/><circle cx="525" cy="340" r="92"/><circle cx="525" cy="340" r="5" fill="#fff"/>
+  <rect x="25" y="170" width="165" height="340"/><rect x="25" y="260" width="55" height="160"/><path d="M190 280a92 92 0 0 1 0 120"/>
+  <rect x="860" y="170" width="165" height="340"/><rect x="970" y="260" width="55" height="160"/><path d="M860 280a92 92 0 0 0 0 120"/>
+</svg>
+
+<header class="bar">
+  <div class="wrap">
+    <a class="brand" href="#table" aria-label="PSL Form Guide">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#c6ff3d"/><circle cx="16" cy="16" r="9" fill="none" stroke="#071006" stroke-width="3"/><path d="M16 7v18M7 16h18" stroke="#071006" stroke-width="3"/></svg>
+      PSL <b>Form</b> Guide
+    </a>
+    <nav class="tabs" role="tablist" aria-label="Sections">
+      <button class="tab" role="tab" data-tab="table" aria-selected="true">Table</button>
+      <button class="tab" role="tab" data-tab="power" aria-selected="false">Power rankings</button>
+      <button class="tab" role="tab" data-tab="fixtures" aria-selected="false">Predictions</button>
+      <button class="tab" role="tab" data-tab="recap" aria-selected="false">Weekly recap</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap" id="app"><noscript><p>This page needs JavaScript to draw the tables and charts.</p></noscript></main>
+
+<footer>
+  <div class="wrap grid">
+    <div>
+      <h5>How the numbers are made</h5>
+      <p>Every team starts at an Elo rating of 1500. After each match the winner takes points from the loser, and the bigger the upset the bigger the swing. The home side gets a 60-point head start when predicting, and every August all ratings drift 25% back toward 1500 because squads change.</p>
+      <details>
+        <summary>The fine print</summary>
+        <ul>
+          <li>Win, draw and loss probabilities split the Elo expectation with a simple heuristic that makes draws likelier between evenly matched teams. It is an estimate, not a fitted model.</li>
+          <li>The constants are standard starting values and have not been tuned for the PSL.</li>
+          <li>Goal margin is ignored, so a 4-0 and a 1-0 move ratings equally.</li>
+          <li>Probabilities are statistical estimates, not betting advice.</li>
+        </ul>
+      </details>
+    </div>
+    <div>
+      <h5>Credits</h5>
+      <p>Match data and club badges: <a href="https://www.thesportsdb.com" target="_blank" rel="noopener">TheSportsDB</a>. Badges belong to their clubs and are shown only to identify them. This project is not affiliated with the PSL or any club.</p>
+      <p>Built with a Python and DuckDB pipeline (bronze, silver, gold), tested on every push. <a id="repo" href="https://github.com/dhludhlazinhle-ops/psl-form-guide" target="_blank" rel="noopener">Source on GitHub</a>.</p>
+    </div>
+  </div>
+</footer>
+
+<dialog id="team-dialog" aria-label="Team details"></dialog>
+
+<script src="data.js"></script>
+<script>
+(function () {
+  "use strict";
+  var D = window.PSL_DATA;
+  var app = document.getElementById("app");
+  if (!D) {
+    app.innerHTML = '<div class="empty" style="margin-top:60px">No data yet. Run <code>python -m src.export</code> and reload this page.</div>';
+    return;
+  }
+
+  /* ---------- helpers ---------- */
+  var esc = function (s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  };
+  var hue = function (name) { var h = 0; for (var i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 360; return h; };
+  var initials = function (name) {
+    var w = name.replace(/[^A-Za-z0-9 ]/g, "").split(/\s+/).filter(Boolean);
+    if (!w.length) return "?";
+    return (w.length > 1 ? w[0][0] + w[1][0] : w[0].slice(0, 2)).toUpperCase();
+  };
+  var LOCALES = ["en-ZA", "en-GB"];
+  var fShort = new Intl.DateTimeFormat(LOCALES, { day: "numeric", month: "short" });
+  var fLong = new Intl.DateTimeFormat(LOCALES, { weekday: "long", day: "numeric", month: "long" });
+  var asDate = function (iso) { return new Date(iso.slice(0, 10) + "T12:00:00"); };
+  var short = function (iso) { return fShort.format(asDate(iso)); };
+  var pct = function (x) { return Math.round(x * 100) + "%"; };
+  var seasonLabel = function (s) { return s.replace(/^(\d{4})-\d{2}(\d{2})$/, "$1/$2"); };
+  var signed = function (n) { return n > 0 ? "+" + n : String(n); };
+
+  var teams = D.teams, latest = D.meta.season;
+  var active = Object.keys(teams).filter(function (t) { return teams[t].active; });
+  var byElo = active.slice().sort(function (a, b) { return teams[b].elo - teams[a].elo; });
+  var smallUrl = function (u) { return /^data:/.test(u) ? u : u + "/small"; };
+
+  function crest(team, size) {
+    var t = teams[team] || {};
+    var inner = t.badge
+      ? '<img src="' + esc(smallUrl(t.badge)) + '" data-full="' + esc(t.badge) + '" data-team="' + esc(team) +
+        '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">'
+      : '<span class="mono" aria-hidden="true">' + esc(initials(team)) + "</span>";
+    return '<span class="crest" style="--s:' + (size || 40) + "px;--h:" + hue(team) + '">' + inner + "</span>";
+  }
+  // If a badge cannot load, try the full-size file once, then fall back to a generated crest.
+  document.addEventListener("error", function (e) {
+    var img = e.target;
+    if (!(img instanceof HTMLImageElement) || !img.dataset.team) return;
+    if (img.dataset.full && !img.dataset.retried && img.src !== img.dataset.full) {
+      img.dataset.retried = "1"; img.src = img.dataset.full; return;
+    }
+    var span = document.createElement("span");
+    span.className = "mono"; span.textContent = initials(img.dataset.team);
+    img.replaceWith(span);
+  }, true);
+
+  var NAMES = { W: "Win", D: "Draw", L: "Loss" };
+  var chips = function (f) {
+    return (f || "").split("").map(function (c) {
+      return '<span class="chip ' + c.toLowerCase() + '" title="' + NAMES[c] + '">' + c + "</span>";
+    }).join("");
+  };
+  var teamBtn = function (team, size, extra) {
+    return '<button class="team-link" data-team="' + esc(team) + '">' + crest(team, size) +
+      '<span class="nm">' + esc(team) + "</span>" + (extra || "") + "</button>";
+  };
+  var eloDelta = function (team, n) {
+    var h = D.elo[team];
+    return h && h.length > n ? h[h.length - 1][1] - h[h.length - 1 - n][1] : null;
+  };
+  function spark(points) {
+    if (!points || points.length < 2) return "";
+    var pts = points.slice(-24), w = 96, h = 30;
+    var ys = pts.map(function (p) { return p[1]; });
+    var min = Math.min.apply(null, ys), span = (Math.max.apply(null, ys) - min) || 1, step = w / (pts.length - 1);
+    var d = pts.map(function (p, i) {
+      return (i ? "L" : "M") + (i * step).toFixed(1) + "," + (h - 3 - ((p[1] - min) / span) * (h - 6)).toFixed(1);
+    }).join("");
+    return '<svg class="spark" viewBox="0 0 ' + w + " " + h + '" aria-hidden="true"><path d="' + d + '"/></svg>';
+  }
+
+  /* ---------- hero ---------- */
+  function hero() {
+    var table = D.tables[latest] || [];
+    var leader = table[0], top = byElo[0];
+    var hot = active.slice().sort(function (a, b) {
+      return teams[b].formPoints - teams[a].formPoints || teams[b].elo - teams[a].elo;
+    })[0];
+    var next = D.fixtures[0];
+    var ticker = D.results.slice(-14).reverse().map(function (r) {
+      return '<span class="tk"><span class="when">' + short(r[0]) + "</span>" + crest(r[1], 20) + esc(r[1]) +
+        " <b>" + r[3] + "&ndash;" + r[4] + "</b> " + esc(r[2]) + crest(r[2], 20) + "</span>";
+    }).join("");
+    var cards = "", second = table[1], runnerUp = byElo[1];
+    if (leader) {
+      var gap = second ? leader.pts - second.pts : 0;
+      var lead = !second ? "" : gap > 0 ? gap + "-point lead over " + esc(second.team) : "Level on points with " + esc(second.team);
+      cards += '<article class="card link" data-team="' + esc(leader.team) + '" style="--accent:var(--gold)"><div class="kicker">Leading the table</div>' +
+        '<div class="who">' + crest(leader.team, 58) + "<div><strong>" + esc(leader.team) + "</strong><small>" + leader.pts + " pts from " + leader.p + " games</small></div></div>" +
+        '<div class="foot">' + lead + "</div></article>";
+    }
+    if (top) {
+      var clear = runnerUp ? Math.round(teams[top].elo - teams[runnerUp].elo) : 0;
+      cards += '<article class="card link" data-team="' + esc(top) + '" style="--accent:var(--blue)"><div class="kicker">Strongest side (Elo)</div>' +
+        '<div class="who">' + crest(top, 58) + "<div><strong>" + esc(top) + '</strong><small><span class="big">' + Math.round(teams[top].elo) + "</span> rating</small></div></div>" +
+        '<div class="foot">' + (runnerUp ? clear + " rating points clear of " + esc(runnerUp) : "") + "</div></article>";
+    }
+    if (hot) cards += '<article class="card link" data-team="' + esc(hot) + '" style="--accent:var(--win)"><div class="kicker">Hottest form</div>' +
+      '<div class="who">' + crest(hot, 58) + "<div><strong>" + esc(hot) + "</strong><small>" + chips(teams[hot].form) + "</small></div></div>" +
+      '<div class="foot">' + teams[hot].formPoints + " points from the last " + (teams[hot].form || "").length + " games</div></article>";
+    if (next) {
+      var fav = next[3] >= next[5] ? next[1] : next[2];
+      cards += '<article class="card next" style="--accent:var(--hot)"><div class="kicker">Next up &middot; ' + short(next[0]) + "</div>" +
+        '<div class="vsrow">' + crest(next[1], 46) + "<i>VS</i>" + crest(next[2], 46) + "</div>" +
+        '<div class="who"><div><strong>' + esc(next[1]) + " v " + esc(next[2]) + "</strong></div></div>" +
+        '<div class="foot"><div class="mini"><i class="ph" style="flex:' + next[3] + '"></i><i class="pd" style="flex:' + next[4] + '"></i><i class="pa" style="flex:' + next[5] + '"></i></div>' +
+        "Elo favours " + esc(fav) + " &middot; " + pct(next[3]) + " / " + pct(next[4]) + " / " + pct(next[5]) + "</div></article>";
+    }
+    var lastRes = D.meta.lastResult ? "Latest result <b>" + short(D.meta.lastResult) + "</b> &middot; " : "";
+    return '<section class="hero"><span class="tag"><span>South African Premier Soccer League &middot; ' + seasonLabel(latest) + "</span></span>" +
+      '<h1><span class="outline">Form</span><br><span class="solid">Guide</span></h1>' +
+      '<p class="lede">Elo ratings, current form and win probabilities for every PSL fixture. Tap any team for its story.</p>' +
+      '<p class="meta">' + lastRes + "data refreshed <b>" + short(D.meta.generatedAt) + "</b></p>" +
+      (ticker ? '<div class="ticker" aria-label="Recent results"><div class="ticker-track">' + ticker + ticker + "</div></div>" : "") +
+      '<div class="spot">' + cards + "</div></section>";
+  }
+
+  /* ---------- league table ---------- */
+  function leagueRows(season) {
+    var rows = D.tables[season] || [], n = rows.length, isLatest = season === latest;
+    return rows.map(function (r) {
+      var cls = r.pos === 1 ? "p1" : r.pos === 2 ? "p2" : r.pos === 3 ? "p3" : (n >= 8 && r.pos > n - 2 ? "dz" : "");
+      return '<tr class="row ' + cls + '" data-team="' + esc(r.team) + '"><td class="pos">' + r.pos + '</td>' +
+        '<td class="tm">' + teamBtn(r.team, 40) + "</td>" +
+        '<td class="hide-s">' + r.p + '</td><td class="hide-s">' + r.w + '</td><td class="hide-s">' + r.d + '</td><td class="hide-s">' + r.l + "</td>" +
+        "<td>" + signed(r.gd) + '</td><td class="pts">' + r.pts + '</td><td class="frm hide-s">' + (isLatest && teams[r.team] ? chips(teams[r.team].form) : "") + "</td></tr>";
+    }).join("");
+  }
+  function tablePanel() {
+    var opts = D.seasons.map(function (s) { return '<option value="' + esc(s) + '">' + seasonLabel(s) + "</option>"; }).join("");
+    return '<section class="panel" id="panel-table" role="tabpanel"><div class="sec-head"><h2>League table</h2>' +
+      '<label class="hint">Season <select id="season" aria-label="Season">' + opts + "</select></label></div>" +
+      '<div class="table-wrap"><table class="league"><thead><tr><th>#</th><th>Team</th><th class="hide-s">P</th><th class="hide-s">W</th><th class="hide-s">D</th><th class="hide-s">L</th><th>GD</th><th>Pts</th><th class="hide-s">Form</th></tr></thead>' +
+      '<tbody id="league-body">' + leagueRows(latest) + "</tbody></table></div>" +
+      '<div class="legend"><span><i class="dot" style="background:var(--gold)"></i>Podium</span><span><i class="dot" style="background:var(--loss)"></i>Bottom two</span>' +
+      '<span>Form: <span class="chip w">W</span><span class="chip d">D</span><span class="chip l">L</span> oldest to newest</span></div></section>';
+  }
+
+  /* ---------- power rankings ---------- */
+  function powerPanel() {
+    var max = teams[byElo[0]] ? teams[byElo[0]].elo : 1500, min = teams[byElo[byElo.length - 1]] ? teams[byElo[byElo.length - 1]].elo : 1400;
+    var span = (max - min) || 1;
+    var rows = byElo.map(function (t, i) {
+      var d = eloDelta(t, 5), cls = d == null ? "flat" : d > 0.5 ? "up" : d < -0.5 ? "down" : "flat";
+      var txt = d == null ? "" : (d > 0.5 ? "&#9650; +" + d.toFixed(0) : d < -0.5 ? "&#9660; " + d.toFixed(0) : "&#9644; 0") + " last 5";
+      var w = Math.round((0.14 + 0.86 * (teams[t].elo - min) / span) * 100);
+      return '<div class="prow" data-team="' + esc(t) + '"><div class="rk">' + (i + 1) + "</div>" + crest(t, 48) +
+        '<div><div class="nm">' + esc(t) + '</div><div class="track"><div class="fill" style="--w:' + w + "%;--h:" + hue(t) + ';animation-delay:' + (i * 40) + 'ms"></div></div></div>' +
+        '<div class="rating">' + spark(D.elo[t]) + '<div class="val"><strong>' + Math.round(teams[t].elo) + '</strong><span class="delta ' + cls + '">' + txt + "</span></div></div></div>";
+    }).join("");
+    return '<section class="panel" id="panel-power" role="tabpanel" hidden><div class="sec-head"><h2>Power rankings</h2>' +
+      '<p class="hint">Elo strength rating. Beating strong teams earns more; everyone starts at 1500. The arrow shows the change over the last five matches.</p></div><div class="power">' + rows + "</div></section>";
+  }
+
+  /* ---------- predictions ---------- */
+  var PAGE = 24, shown = PAGE, filterTeam = "";
+  function fixtureList() {
+    var list = D.fixtures.filter(function (f) { return !filterTeam || f[1] === filterTeam || f[2] === filterTeam; });
+    if (!list.length) return '<div class="empty">No upcoming fixtures in the data yet. Refresh with <code>python -m src.pipeline</code> and <code>python -m src.export</code>.</div>';
+    var out = "", day = "";
+    list.slice(0, shown).forEach(function (f) {
+      if (f[0] !== day) { if (day) out += "</div>"; day = f[0]; out += '<div class="day"><h3><span>' + fLong.format(asDate(f[0])) + "</span></h3>"; }
+      var favH = f[3] >= f[5];
+      out += '<article class="match"><button class="side home" data-team="' + esc(f[1]) + '">' + crest(f[1], 46) +
+        '<span><span class="nm ' + (favH ? "fav" : "") + '">' + esc(f[1]) + "</span><small>Elo " + Math.round(f[6]) + "</small></span></button>" +
+        '<div class="mid"><div class="vs">VS</div><div class="prob" role="img" aria-label="Home ' + pct(f[3]) + ", draw " + pct(f[4]) + ", away " + pct(f[5]) + '">' +
+        '<i class="ph" style="flex:' + f[3] + '"></i><i class="pd" style="flex:' + f[4] + '"></i><i class="pa" style="flex:' + f[5] + '"></i></div>' +
+        '<div class="pcts"><span>' + pct(f[3]) + "</span><span>" + pct(f[4]) + "</span><span>" + pct(f[5]) + "</span></div></div>" +
+        '<button class="side away" data-team="' + esc(f[2]) + '">' + crest(f[2], 46) +
+        '<span><span class="nm ' + (!favH ? "fav" : "") + '">' + esc(f[2]) + "</span><small>Elo " + Math.round(f[7]) + "</small></span></button></article>";
+    });
+    if (day) out += "</div>";
+    if (list.length > shown) out += '<button class="more" id="more">Show more fixtures (' + (list.length - shown) + " left)</button>";
+    return out;
+  }
+  function fixturesPanel() {
+    var opts = '<option value="">All teams</option>' + active.slice().sort().map(function (t) { return '<option value="' + esc(t) + '">' + esc(t) + "</option>"; }).join("");
+    return '<section class="panel" id="panel-fixtures" role="tabpanel" hidden><div class="sec-head"><h2>Predictions</h2>' +
+      '<label class="hint">Team <select id="team-filter" aria-label="Filter by team">' + opts + "</select></label></div>" +
+      '<p class="hint" style="margin-bottom:6px"><span style="color:var(--lime)">Home win</span> &middot; draw &middot; <span style="color:var(--blue)">away win</span>. Estimates from Elo ratings, not betting advice.</p>' +
+      '<div id="fixture-list">' + fixtureList() + "</div></section>";
+  }
+
+  /* ---------- recap ---------- */
+  function recapPanel() {
+    var r = D.recap, body;
+    if (!r) {
+      body = '<div class="empty">No recap yet. Add an <code>ANTHROPIC_API_KEY</code>, run <code>python -m src.pipeline --skip-ingest --recap</code>, then <code>python -m src.export</code>.</div>';
+    } else {
+      var paras = esc(r.text).split(/\n\s*\n/).map(function (p) {
+        return "<p>" + p.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>").replace(/\n/g, "<br>") + "</p>";
+      }).join("");
+      body = '<div class="column">' + paras + '<div class="sign">Written by <b>Claude</b> (' + esc(r.model) + ") on " + short(r.generatedAt) +
+        ", using only the numbers shown on this site.</div></div>";
+    }
+    return '<section class="panel" id="panel-recap" role="tabpanel" hidden><div class="sec-head"><h2>Weekly recap</h2>' +
+      '<p class="hint">The week in the PSL, told in a pundit&rsquo;s voice. The facts come straight from the data.</p></div>' + body + "</section>";
+  }
+
+  /* ---------- team dialog ---------- */
+  function eloChart(team) {
+    var h = D.elo[team];
+    if (!h || h.length < 2) return "";
+    var W = 720, H = 240, L = 46, R = 16, T = 14, B = 28;
+    var ys = h.map(function (p) { return p[1]; });
+    var min = Math.floor(Math.min.apply(null, ys) / 10) * 10 - 10, max = Math.ceil(Math.max.apply(null, ys) / 10) * 10 + 10;
+    var t0 = asDate(h[0][0]).getTime(), t1 = asDate(h[h.length - 1][0]).getTime(), tspan = (t1 - t0) || 1;
+    var X = function (iso) { return L + ((asDate(iso).getTime() - t0) / tspan) * (W - L - R); };
+    var Y = function (v) { return T + (1 - (v - min) / (max - min)) * (H - T - B); };
+    var line = h.map(function (p, i) { return (i ? "L" : "M") + X(p[0]).toFixed(1) + "," + Y(p[1]).toFixed(1); }).join("");
+    var area = line + "L" + X(h[h.length - 1][0]).toFixed(1) + "," + (H - B) + "L" + X(h[0][0]).toFixed(1) + "," + (H - B) + "Z";
+    var grid = "";
+    for (var i = 0; i <= 4; i++) {
+      var v = min + ((max - min) * i) / 4;
+      grid += '<line class="grid" x1="' + L + '" x2="' + (W - R) + '" y1="' + Y(v).toFixed(1) + '" y2="' + Y(v).toFixed(1) + '"/><text class="axis" x="' + (L - 8) + '" y="' + (Y(v) + 4).toFixed(1) + '" text-anchor="end">' + Math.round(v) + "</text>";
+    }
+    var hover = h.map(function (p) {
+      return '<circle cx="' + X(p[0]).toFixed(1) + '" cy="' + Y(p[1]).toFixed(1) + '" r="7" fill="transparent"><title>' + short(p[0]) + " " + asDate(p[0]).getFullYear() + ": " + Math.round(p[1]) + "</title></circle>";
+    }).join("");
+    var last = h[h.length - 1];
+    return '<svg class="chart" viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Elo rating over time for ' + esc(team) + '">' +
+      '<defs><linearGradient id="ga" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#c6ff3d" stop-opacity=".38"/><stop offset="1" stop-color="#c6ff3d" stop-opacity="0"/></linearGradient></defs>' +
+      grid + '<path d="' + area + '" fill="url(#ga)"/><path class="line" d="' + line + '"/>' +
+      '<circle cx="' + X(last[0]).toFixed(1) + '" cy="' + Y(last[1]).toFixed(1) + '" r="5.5" fill="#c6ff3d" stroke="#0b111d" stroke-width="3"/>' + hover +
+      '<text class="axis" x="' + L + '" y="' + (H - 8) + '">' + short(h[0][0]) + " " + asDate(h[0][0]).getFullYear() + '</text>' +
+      '<text class="axis" x="' + (W - R) + '" y="' + (H - 8) + '" text-anchor="end">' + short(last[0]) + " " + asDate(last[0]).getFullYear() + "</text></svg>";
+  }
+  function teamSheet(team) {
+    var t = teams[team] || {}, row = (D.tables[latest] || []).filter(function (r) { return r.team === team; })[0];
+    var played = D.results.filter(function (r) { return r[1] === team || r[2] === team; }).slice(-6).reverse().map(function (r) {
+      var home = r[1] === team, gf = home ? r[3] : r[4], ga = home ? r[4] : r[3], res = gf > ga ? "w" : gf === ga ? "d" : "l";
+      var opp = home ? r[2] : r[1];
+      return '<div class="item"><span class="dt">' + short(r[0]) + "</span>" + crest(opp, 28) + '<span class="o">' + (home ? "v " : "@ ") + esc(opp) +
+        '</span><span class="s">' + r[3] + "&ndash;" + r[4] + '</span><span class="chip ' + res + '">' + res.toUpperCase() + "</span></div>";
+    }).join("");
+    var next = D.fixtures.filter(function (f) { return f[1] === team || f[2] === team; }).slice(0, 5).map(function (f) {
+      var home = f[1] === team, opp = home ? f[2] : f[1], p = home ? f[3] : f[5];
+      return '<div class="item"><span class="dt">' + short(f[0]) + "</span>" + crest(opp, 28) + '<span class="o">' + (home ? "v " : "@ ") + esc(opp) +
+        '</span><span class="pr">' + pct(p) + " to win</span></div>";
+    }).join("");
+    return '<div class="sheet" style="--h:' + hue(team) + '"><div class="sheet-head">' + crest(team, 104) +
+      "<div><h3>" + esc(team) + "</h3><p>" + (t.rank ? "Position " + t.rank + " &middot; " : "") + (t.active ? "" : "Not in the current season &middot; ") +
+      "Elo " + Math.round(t.elo || 1500) + "</p></div>" + '<button class="close" aria-label="Close">&times;</button></div>' +
+      '<div class="sheet-body"><div class="stats">' +
+      '<div class="stat"><small>Elo rating</small><strong>' + Math.round(t.elo || 1500) + "</strong></div>" +
+      (row ? '<div class="stat"><small>Points</small><strong>' + row.pts + '</strong></div><div class="stat"><small>Goal diff</small><strong>' + signed(row.gd) + "</strong></div>" : "") +
+      '<div class="stat"><small>Last 5</small><strong style="font-size:1.1rem">' + (chips(t.form) || "&ndash;") + "</strong></div></div>" +
+      "<h4>Rating over time</h4>" + (eloChart(team) || '<div class="empty">Not enough history yet.</div>') +
+      '<div class="two"><div><h4>Recent results</h4><div class="list">' + (played || '<div class="empty">No results yet.</div>') + "</div></div>" +
+      '<div><h4>Next fixtures</h4><div class="list">' + (next || '<div class="empty">None scheduled.</div>') + "</div></div></div></div></div>";
+  }
+  var dlg = document.getElementById("team-dialog"), opener = null;
+  function openTeam(team, from) {
+    if (!teams[team]) return;
+    opener = from || document.activeElement;
+    dlg.innerHTML = teamSheet(team);
+    if (typeof dlg.showModal === "function") { if (!dlg.open) dlg.showModal(); } else { dlg.setAttribute("open", ""); }
+  }
+  function closeTeam() {
+    if (typeof dlg.close === "function") { if (dlg.open) dlg.close(); } else { dlg.removeAttribute("open"); }
+    if (opener && opener.focus) opener.focus();
+  }
+  dlg.addEventListener("click", function (e) {
+    if (e.target === dlg || (e.target.closest && e.target.closest(".close"))) closeTeam();
+  });
+
+  /* ---------- wiring ---------- */
+  app.innerHTML = hero() + tablePanel() + powerPanel() + fixturesPanel() + recapPanel();
+
+  function showTab(name) {
+    var found = false;
+    document.querySelectorAll(".tab").forEach(function (b) {
+      var on = b.dataset.tab === name; if (on) found = true;
+      b.setAttribute("aria-selected", on ? "true" : "false");
+    });
+    if (!found) name = "table";
+    document.querySelectorAll(".panel").forEach(function (p) { p.hidden = p.id !== "panel-" + name; });
+    var hero = document.querySelector(".hero"); if (hero) hero.hidden = name !== "table";
+    if (location.hash !== "#" + name) history.replaceState(null, "", "#" + name);
+  }
+  document.querySelector(".tabs").addEventListener("click", function (e) {
+    var b = e.target.closest(".tab"); if (b) { showTab(b.dataset.tab); window.scrollTo({ top: 0, behavior: "smooth" }); }
+  });
+  document.querySelector(".brand").addEventListener("click", function (e) { e.preventDefault(); showTab("table"); window.scrollTo({ top: 0, behavior: "smooth" }); });
+
+  app.addEventListener("click", function (e) {
+    var more = e.target.closest("#more");
+    if (more) { shown += PAGE; document.getElementById("fixture-list").innerHTML = fixtureList(); return; }
+    var el = e.target.closest("[data-team]");
+    if (el) openTeam(el.dataset.team, el.querySelector ? (el.querySelector("button[data-team]") || el) : el);
+  });
+  app.addEventListener("change", function (e) {
+    if (e.target.id === "season") document.getElementById("league-body").innerHTML = leagueRows(e.target.value);
+    if (e.target.id === "team-filter") { filterTeam = e.target.value; shown = PAGE; document.getElementById("fixture-list").innerHTML = fixtureList(); }
+  });
+
+  showTab((location.hash || "#table").slice(1));
+})();
+</script>
+</body>
+</html>
