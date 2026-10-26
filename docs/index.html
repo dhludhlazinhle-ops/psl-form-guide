@@ -469,7 +469,7 @@ noscript p{padding:40px;text-align:center}
   var PAGE = 24, shown = PAGE, filterTeam = "";
   function fixtureList() {
     var list = D.fixtures.filter(function (f) { return !filterTeam || f[1] === filterTeam || f[2] === filterTeam; });
-    if (!list.length) return '<div class="empty">No upcoming fixtures in the data yet. Refresh with <code>python -m src.pipeline</code> and <code>python -m src.export</code>.</div>';
+    if (!list.length) return '<div class="empty">No upcoming fixtures are scheduled right now. Check back soon.</div>';
     var out = "", day = "";
     list.slice(0, shown).forEach(function (f) {
       if (f[0] !== day) { if (day) out += "</div>"; day = f[0]; out += '<div class="day"><h3><span>' + fLong.format(asDate(f[0])) + "</span></h3>"; }
@@ -498,7 +498,7 @@ noscript p{padding:40px;text-align:center}
   function recapPanel() {
     var r = D.recap, body;
     if (!r) {
-      body = '<div class="empty">No recap yet. Add an <code>ANTHROPIC_API_KEY</code>, run <code>python -m src.pipeline --skip-ingest --recap</code>, then <code>python -m src.export</code>.</div>';
+      body = '<div class="empty">The weekly recap will appear here once it has been written.</div>';
     } else {
       var paras = esc(r.text).split(/\n\s*\n/).map(function (p) {
         return "<p>" + p.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>").replace(/\n/g, "<br>") + "</p>";
@@ -579,6 +579,14 @@ noscript p{padding:40px;text-align:center}
 
   /* ---------- wiring ---------- */
   app.innerHTML = hero() + tablePanel() + powerPanel() + fixturesPanel() + recapPanel();
+
+  // No recap yet: leave the tab out instead of showing visitors an empty page.
+  if (!D.recap) {
+    var recapTab = document.querySelector('.tab[data-tab="recap"]');
+    if (recapTab) recapTab.remove();
+    var recapEl = document.getElementById("panel-recap");
+    if (recapEl) recapEl.remove();
+  }
 
   function showTab(name) {
     var found = false;
