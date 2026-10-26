@@ -1,0 +1,79 @@
+name: refresh-data
+
+# Refreshes the PSL data every Monday morning and republishes the website.
+# Run it by hand any time from the Actions tab (workflow "refresh-data" -> Run workflow).
+on:
+  schedule:
+    - cron: "0 5 * * 1"   # Mondays 05:00 UTC, which is 07:00 in South Africa
+  workflow_dispatch:
+
+permissions:
+  contents: write   # lets the job commit the refreshed docs/data.js
+  pages: write      # lets the job ask GitHub Pages to rebuild
+
+concurrency:
+  group: refresh-data
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # The warehouse (data/) is not in git, so it is kept between runs in the Actions cache.
+      # On the very first run there is nothing to restore and every season is fetched.
+      - name: Restore the warehouse from the last run
+        uses: actions/cache/restore@v4
+        with:
+          path: data
+          key: psl-data-${{ github.run_id }}
+          restore-keys: psl-data-
+
+      - name: Refresh the data and export the site data
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          PSL_REQUEST_DELAY: "3"
+        run: |
+          # The weekly recap is written only if an ANTHROPIC_API_KEY secret has been added.
+          if [ -n "$ANTHROPIC_API_KEY" ]; then RECAP="--recap"; else RECAP=""; fi
+          python -m src.pipeline --auto --export $RECAP
+
+      # Saved even when a later step fails. A partly filled warehouse is safe: the next run
+      # notices which seasons are missing and fetches them.
+      - name: Save the warehouse for the next run
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: data
+          key: psl-data-${{ github.run_id }}
+
+      - name: Check the exported site data
+        run: python -m pytest -q tests/test_site.py
+
+      - name: Commit the refreshed site data
+        run: |
+          git config user.name "psl-refresh-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add docs/data.js
+          if git diff --cached --quiet; then
+            echo "Nothing changed, nothing to publish"
+          else
+            git commit -m "chore: refresh site data"
+            git push
+          fi
+
+      - name: Ask GitHub Pages to rebuild
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X POST "repos/${{ github.repository }}/pages/builds"

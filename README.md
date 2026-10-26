@@ -22,6 +22,7 @@ An end-to-end data product for the South African Premier Soccer League (PSL): a 
 
 ```mermaid
 flowchart LR
+    CRON[Weekly GitHub Action] -.-> API
     API[TheSportsDB API] -->|retries, rate-limit handling| B[(bronze)]
     B -->|type, dedupe, standardise names| S[(silver)]
     S -.->|rows removed by a rule| Q[(quarantine)]
@@ -88,18 +89,19 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 
-python -m src.pipeline --all          # first run: fetch every season, build every layer
-python -m src.export                  # write docs/data.js, then open docs/index.html
-python -m src.pipeline                # later: refresh the current season only
-python -m pytest -q                   # run the tests
-streamlit run dashboard/app.py        # optional analyst dashboard
+python -m src.pipeline --all --export    # first run: fetch every season, build every layer, write docs/data.js
+python -m src.pipeline --auto --export   # later: refresh the current season (plus any season that is missing)
+python -m pytest -q                      # run the tests
+streamlit run dashboard/app.py           # optional analyst dashboard
 ```
 
 The free API is rate limited. On a shared network, slow the requests down: `PSL_REQUEST_DELAY=7 python -m src.pipeline --all`.
 
-**Weekly recap.** Copy `.env.example` to `.env`, add an `ANTHROPIC_API_KEY`, then run `python -m src.pipeline --skip-ingest --recap` followed by `python -m src.export`. The recap is written only from the numbers in the gold tables. The website and dashboard never call the API themselves.
+**Weekly recap.** Copy `.env.example` to `.env`, add an `ANTHROPIC_API_KEY`, then run `python -m src.pipeline --skip-ingest --recap --export`. The recap is written only from the numbers in the gold tables. The website and dashboard never call the API themselves.
 
-**Publishing.** The site is served by GitHub Pages from the `docs/` folder on `main`. After a refresh, commit `docs/data.js` and push.
+**Publishing.** The site is served by GitHub Pages from the `docs/` folder on `main`. Open `docs/index.html` in a browser to preview it locally.
+
+**Scheduled refresh.** `.github/workflows/refresh.yml` runs every Monday morning, and on demand from the Actions tab. It restores the warehouse from the Actions cache, fetches the current season and any season that is missing, rebuilds every layer, checks `docs/data.js`, commits it and asks GitHub Pages to rebuild. A failed quality check stops the run before anything is published. To have the weekly recap written automatically, add an `ANTHROPIC_API_KEY` repository secret; without one the refresh simply skips the recap.
 
 **Orchestration.** `flows/pipeline_flow.py` wraps the same steps as a Prefect flow with retries: `python -m flows.pipeline_flow`.
 
@@ -112,12 +114,13 @@ src/elo.py          Elo maths (pure functions)
 src/model.py        silver -> gold tables and predictions
 src/recap.py        weekly recap with Claude
 src/export.py       gold -> docs/data.js for the website
-src/pipeline.py     ingest -> clean -> model -> recap
+src/pipeline.py     ingest -> clean -> model -> recap -> export
 docs/               the website (index.html, data.js)
 dashboard/app.py    Streamlit analyst dashboard
 flows/              Prefect flow
 seeds/              team name mapping
-tests/              pytest suite, run on every push by GitHub Actions
+.github/workflows/  ci.yml (tests on every push) and refresh.yml (weekly data refresh)
+tests/              pytest suite
 ```
 
 ## Limitations and next steps
@@ -125,7 +128,7 @@ tests/              pytest suite, run on every push by GitHub Actions
 - Elo constants and the draw heuristic are not tuned. Next: backtest K and home advantage on past seasons.
 - Goal margin is ignored, so a 4-0 and a 1-0 move ratings equally.
 - One free data source. A second source would allow cross-checking scores.
-- The site is refreshed by running the pipeline and pushing `docs/data.js`. A scheduled GitHub Actions job could do that automatically.
+- The free test API key is shared and rate limited, so a scheduled run can be slow, or fail on a busy day. A paid key would remove that limit.
 
 ## Data source and credit
 
