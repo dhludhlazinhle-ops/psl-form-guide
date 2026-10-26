@@ -133,3 +133,7 @@ tests/              pytest suite
 ## Data source and credit
 
 Match data and club badges come from [TheSportsDB](https://www.thesportsdb.com), used through its free test API key. Check their terms before using the data beyond personal projects. Badges belong to their clubs and are shown only to identify them. This project is not affiliated with the PSL or any club. Predictions are statistical estimates, not betting advice.
+
+## Verification Code
+WTC-5CW9ALET
+
