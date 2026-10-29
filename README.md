@@ -136,4 +136,5 @@ Match data and club badges come from [TheSportsDB](https://www.thesportsdb.com),
 
 ## Verification Code
 WTC-5CW9ALET
+WTC-5CW9ALET
 
